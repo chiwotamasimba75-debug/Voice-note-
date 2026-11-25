@@ -1,0 +1,2070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <meta name="theme-color" content="#064e3b" />
+  <meta name="description" content="VoiceNote-to-Action — Offline-ready Voice-to-Receipt, Quote, Order & Checklist converter with zero server dependencies." />
+  <title>VoiceNote-to-Action — Voice to Receipt &amp; Checklist</title>
+
+  <!-- Inline Web App Manifest for zero-server PWA installation -->
+  <link rel="manifest" href='data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22VoiceNote-to-Action%22%2C%22short_name%22%3A%22VoiceAction%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f172a%22%2C%22theme_color%22%3A%22%23064e3b%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%2520viewBox%3D%270%200%20512%20512%27%253E%253Crect%2520width%3D%27512%27%2520height%3D%27512%27%2520rx%3D%27112%27%2520fill%3D%27%23064e3b%27%2F%253E%253Crect%2520x%3D%27216%27%2520y%3D%27112%27%2520width%3D%2780%27%2520height%3D%27168%27%2520rx%3D%2740%27%2520fill%3D%27%23f59e0b%27%2F%253E%253Cpath%2520d%3D%27M152%20240a104%20104%200%200%200%20208%200M256%20344v64M196%20408h120%27%2520fill%3D%27none%27%2520stroke%3D%27%23ffffff%27%2520stroke-width%3D%2732%27%2520stroke-linecap%3D%27round%27%2F%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D' />
+
+  <style>
+    /* =========================================================
+       DESIGN TOKENS & ADAPTIVE LIGHT/DARK PALETTE
+       Zero external CSS or web fonts — sub-second load on 2G/3G
+       ========================================================= */
+    :root {
+      --bg-app: #f1f5f9;
+      --bg-card: #ffffff;
+      --bg-subtle: #f8fafc;
+      --bg-input: #ffffff;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-faint: #64748b;
+
+      --emerald-950: #022c22;
+      --emerald-900: #064e3b;
+      --emerald-800: #065f46;
+      --emerald-700: #047857;
+      --emerald-600: #059669;
+      --emerald-100: #d1fae5;
+      --emerald-50: #ecfdf5;
+
+      --amber-600: #d97706;
+      --amber-500: #f59e0b;
+      --amber-400: #fbbf24;
+      --amber-100: #fef3c7;
+      --amber-50: #fffbeb;
+
+      --rose-700: #be123c;
+      --rose-600: #e11d48;
+      --rose-100: #ffe4e6;
+      --rose-50: #fff1f2;
+
+      --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+      --shadow-md: 0 8px 20px -4px rgba(15, 23, 42, 0.1);
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+    }
+
+    body.dark {
+      --bg-app: #090d16;
+      --bg-card: #111827;
+      --bg-subtle: #1e293b;
+      --bg-input: #0f172a;
+      --border: #1e293b;
+      --border-strong: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #cbd5e1;
+      --text-faint: #94a3b8;
+
+      --emerald-100: rgba(16, 185, 129, 0.18);
+      --emerald-50: rgba(16, 185, 129, 0.1);
+      --amber-100: rgba(245, 158, 11, 0.18);
+      --amber-50: rgba(245, 158, 11, 0.1);
+      --rose-100: rgba(244, 63, 94, 0.18);
+      --rose-50: rgba(244, 63, 94, 0.1);
+
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45);
+      --shadow-md: 0 10px 26px -4px rgba(0, 0, 0, 0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      line-height: 1.45;
+      min-height: 100vh;
+      padding-bottom: 44px;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 620px;
+      margin: 0 auto;
+      padding: 0 14px;
+    }
+
+    /* =========================================================
+       STICKY HEADER
+       ========================================================= */
+    .app-header {
+      background: linear-gradient(135deg, var(--emerald-950) 0%, var(--emerald-900) 100%);
+      color: #ffffff;
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      box-shadow: 0 2px 12px rgba(2, 44, 34, 0.28);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 14px;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
+      background: linear-gradient(135deg, var(--amber-400), var(--amber-600));
+      color: var(--emerald-950);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    }
+
+    .brand-title {
+      font-size: 16.5px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge-pro-top {
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: var(--amber-400);
+      color: var(--emerald-950);
+      padding: 2px 6px;
+      border-radius: 5px;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: #a7f3d0;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #34d399;
+      display: inline-block;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .icon-btn {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #ffffff;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: transform 0.12s ease;
+    }
+
+    .icon-btn:active {
+      transform: scale(0.95);
+    }
+
+    .icon-btn.amber {
+      background: var(--amber-500);
+      border-color: var(--amber-400);
+      color: var(--emerald-950);
+    }
+
+    /* =========================================================
+       CARDS & SECTIONS
+       ========================================================= */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin-top: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .card-sub {
+      font-size: 12px;
+      color: var(--text-faint);
+    }
+
+    /* =========================================================
+       1. VOICE RECORDER STUDIO & WAVEFORM
+       ========================================================= */
+    .voice-studio {
+      background: linear-gradient(145deg, var(--emerald-950) 0%, var(--emerald-900) 100%);
+      color: #ffffff;
+      border: none;
+      text-align: center;
+      padding: 18px 16px;
+    }
+
+    .mic-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin: 4px 0 14px;
+    }
+
+    .mic-btn {
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      border: 4px solid rgba(251, 191, 36, 0.35);
+      background: linear-gradient(135deg, var(--amber-400), var(--amber-600));
+      color: var(--emerald-950);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+      transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+      user-select: none;
+    }
+
+    .mic-btn:active {
+      transform: scale(0.94);
+    }
+
+    .mic-btn.listening {
+      background: linear-gradient(135deg, #fb7185, #e11d48);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.5);
+      animation: micPulse 1.3s infinite ease-in-out;
+    }
+
+    @keyframes micPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.65); }
+      50% { box-shadow: 0 0 0 16px rgba(244, 63, 94, 0); }
+    }
+
+    /* Live Waveform Bars */
+    .waveform {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      height: 22px;
+    }
+
+    .wave-bar {
+      width: 4px;
+      height: 6px;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, 0.28);
+      transition: height 0.15s ease, background 0.15s ease;
+    }
+
+    .waveform.active .wave-bar {
+      background: var(--amber-400);
+      animation: waveDance 0.65s infinite ease-in-out alternate;
+    }
+
+    .waveform.active .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+    .waveform.active .wave-bar:nth-child(3) { animation-delay: 0.22s; }
+    .waveform.active .wave-bar:nth-child(4) { animation-delay: 0.34s; }
+    .waveform.active .wave-bar:nth-child(5) { animation-delay: 0.18s; }
+    .waveform.active .wave-bar:nth-child(6) { animation-delay: 0.28s; }
+    .waveform.active .wave-bar:nth-child(7) { animation-delay: 0.08s; }
+
+    @keyframes waveDance {
+      0% { height: 5px; }
+      100% { height: 22px; }
+    }
+
+    .mic-hint {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fef3c7;
+    }
+
+    .mic-subhint {
+      font-size: 11px;
+      color: #a7f3d0;
+    }
+
+    .transcript-box {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.26);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      border-radius: var(--radius-md);
+      padding: 11px 12px;
+      font-family: inherit;
+      font-size: 13.5px;
+      line-height: 1.45;
+      resize: vertical;
+      outline: none;
+      margin-top: 8px;
+    }
+
+    .transcript-box::placeholder {
+      color: rgba(255, 255, 255, 0.48);
+    }
+
+    .transcript-box:focus {
+      border-color: var(--amber-400);
+    }
+
+    .sample-pills {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .sample-pill {
+      background: rgba(255, 255, 255, 0.11);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #ecfdf5;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .sample-pill:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .studio-actions {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn-convert {
+      background: linear-gradient(135deg, var(--amber-400), var(--amber-500));
+      color: var(--emerald-950);
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    }
+
+    .btn-convert:active {
+      transform: scale(0.98);
+    }
+
+    .btn-clear-text {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      border-radius: var(--radius-md);
+      padding: 0 14px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* =========================================================
+       2. STRUCTURED ACTION CARD / RECEIPT EDITOR
+       ========================================================= */
+    .mode-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      padding: 4px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+    }
+
+    .mode-tab {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 800;
+      padding: 8px 6px;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .mode-tab.active {
+      background: var(--emerald-700);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(4, 120, 87, 0.25);
+    }
+
+    /* Printable Receipt Paper Container */
+    .receipt-sheet {
+      border: 1.5px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      background: var(--bg-subtle);
+      padding: 14px;
+    }
+
+    .receipt-header-bar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 11px;
+      border-bottom: 1.5px dashed var(--border-strong);
+      margin-bottom: 12px;
+    }
+
+    .doc-type-badge {
+      display: inline-block;
+      font-size: 10.5px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: var(--emerald-100);
+      color: var(--emerald-800);
+      padding: 3px 8px;
+      border-radius: 6px;
+      margin-bottom: 4px;
+    }
+
+    body.dark .doc-type-badge {
+      color: #6ee7b7;
+    }
+
+    .biz-header-text {
+      font-size: 15px;
+      font-weight: 900;
+      color: var(--text-main);
+    }
+
+    .doc-meta-right {
+      text-align: right;
+      font-size: 11px;
+      color: var(--text-faint);
+      font-weight: 600;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .field-box {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .field-box.full {
+      grid-column: 1 / -1;
+    }
+
+    .field-label {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-faint);
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-strong);
+      color: var(--text-main);
+      border-radius: 8px;
+      padding: 8px 9px;
+      font-size: 13px;
+      font-weight: 700;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--emerald-600);
+    }
+
+    /* Line Items Table */
+    .items-header {
+      display: grid;
+      grid-template-columns: 1fr 56px 76px 26px;
+      gap: 6px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      padding: 0 2px 5px;
+    }
+
+    .item-row {
+      display: grid;
+      grid-template-columns: 1fr 56px 76px 26px;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 7px;
+    }
+
+    .item-row input {
+      padding: 7px 7px;
+      font-size: 12.5px;
+    }
+
+    .item-row input.num {
+      text-align: right;
+    }
+
+    /* Checklist Rows */
+    .task-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 7px 9px;
+      margin-bottom: 7px;
+    }
+
+    .task-check {
+      width: 19px;
+      height: 19px;
+      accent-color: var(--emerald-600);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .task-input {
+      border: none !important;
+      background: transparent !important;
+      padding: 2px 4px !important;
+      font-size: 13px !important;
+      flex: 1;
+    }
+
+    .task-input.done {
+      text-decoration: line-through;
+      color: var(--text-faint);
+    }
+
+    .btn-row-del {
+      background: transparent;
+      border: none;
+      color: var(--text-faint);
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      padding: 2px 5px;
+      border-radius: 6px;
+    }
+
+    .btn-row-del:hover {
+      color: var(--rose-600);
+      background: var(--rose-50);
+    }
+
+    .btn-add-row {
+      background: var(--bg-card);
+      border: 1px dashed var(--border-strong);
+      color: var(--emerald-700);
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      margin-top: 2px;
+    }
+
+    body.dark .btn-add-row {
+      color: #34d399;
+    }
+
+    /* Totals & Secondary Currency Box */
+    .totals-panel {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1.5px dashed var(--border-strong);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .fx-strip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 9px;
+      font-size: 11.5px;
+    }
+
+    .fx-inputs {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .fx-inputs input {
+      width: 56px;
+      padding: 4px 6px;
+      font-size: 11.5px;
+      text-align: right;
+    }
+
+    .fx-inputs input.curr-tag {
+      width: 44px;
+      text-align: left;
+      text-transform: uppercase;
+    }
+
+    .grand-total-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding-top: 4px;
+    }
+
+    .grand-label {
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .grand-amounts {
+      text-align: right;
+    }
+
+    .grand-main {
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--emerald-700);
+    }
+
+    body.dark .grand-main {
+      color: #34d399;
+    }
+
+    .grand-secondary {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--amber-600);
+    }
+
+    /* Primary Output Buttons */
+    .output-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn-whatsapp {
+      grid-column: 1 / -1;
+      background: #25d366;
+      color: #022c22;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 13px 14px;
+      font-size: 14px;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      box-shadow: 0 4px 12px rgba(37, 211, 102, 0.25);
+    }
+
+    .btn-whatsapp:active {
+      transform: scale(0.98);
+    }
+
+    .btn-secondary {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-strong);
+      color: var(--text-main);
+      border-radius: var(--radius-md);
+      padding: 10px 10px;
+      font-size: 12.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .btn-save-vault {
+      background: var(--emerald-800);
+      border: none;
+      color: #ffffff;
+      border-radius: var(--radius-md);
+      padding: 10px 10px;
+      font-size: 12.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    /* =========================================================
+       3. OFFLINE HISTORY VAULT
+       ========================================================= */
+    .search-bar {
+      margin-bottom: 10px;
+    }
+
+    .vault-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .vault-item {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 11px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .vault-info {
+      min-width: 0;
+      flex: 1;
+      cursor: pointer;
+    }
+
+    .vault-title-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 2px;
+    }
+
+    .vault-client {
+      font-size: 14px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .vault-meta {
+      font-size: 11.5px;
+      color: var(--text-faint);
+    }
+
+    .vault-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .status-pill {
+      border: none;
+      border-radius: 7px;
+      padding: 6px 9px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .status-pill.pending {
+      background: var(--amber-100);
+      color: var(--amber-600);
+    }
+
+    .status-pill.done {
+      background: var(--emerald-100);
+      color: var(--emerald-800);
+    }
+
+    body.dark .status-pill.done {
+      color: #6ee7b7;
+    }
+
+    /* =========================================================
+       MODAL & TOAST
+       ========================================================= */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.7);
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 430px;
+      padding: 18px;
+      box-shadow: var(--shadow-md);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .modal-title {
+      font-size: 17px;
+      font-weight: 900;
+    }
+
+    .pro-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 12px 0;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .pro-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .pro-check {
+      background: var(--emerald-100);
+      color: var(--emerald-700);
+      font-weight: 900;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(14px);
+      background: #0f172a;
+      color: #ffffff;
+      border: 1px solid #334155;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      font-weight: 700;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.2s ease;
+      z-index: 60;
+      white-space: nowrap;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* =========================================================
+       CLEAN PRINT / PDF STYLESHEET
+       Prints only the formatted receipt/quote card cleanly
+       ========================================================= */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+      }
+      .no-print, .app-header, .voice-studio, .mode-tabs, .output-grid, .vault-section, .fx-strip, .btn-add-row, .btn-row-del {
+        display: none !important;
+      }
+      .container {
+        max-width: 100% !important;
+        padding: 0 !important;
+      }
+      .card {
+        border: none !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .receipt-sheet {
+        border: 1.5px solid #000000 !important;
+        background: #ffffff !important;
+      }
+      input, select {
+        border: none !important;
+        background: transparent !important;
+        padding: 2px 0 !important;
+        color: #000000 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =========================================================
+       STICKY HEADER
+       ========================================================= -->
+  <header class="app-header no-print">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true">
+          <!-- Inline Microphone + Receipt Spark SVG -->
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="2" width="6" height="12" rx="3"/>
+            <path d="M5 10a7 7 0 0 0 14 0"/>
+            <line x1="12" y1="17" x2="12" y2="22"/>
+            <line x1="8" y1="22" x2="16" y2="22"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">
+            <span>VoiceNote-to-Action</span>
+            <span class="badge-pro-top hidden" id="header-pro-badge">PRO</span>
+          </div>
+          <div class="brand-sub">
+            <span class="status-dot"></span>
+            <span id="net-status">100% Offline • Zero AI Server Bills</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="icon-btn" onclick="toggleTheme()" title="Toggle Light/Dark Mode" aria-label="Toggle Theme">
+          <span id="theme-icon">🌙</span>
+        </button>
+        <button class="icon-btn amber" onclick="openProModal()">
+          <span id="header-pro-btn">Pro $2.99</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- =========================================================
+         1. VOICE RECORDER & SMART TEXT STUDIO
+         ========================================================= -->
+    <section class="card voice-studio no-print" aria-label="Voice Note Recorder">
+      <div class="mic-wrapper">
+        <button type="button" class="mic-btn" id="mic-btn" onclick="toggleRecording()" aria-label="Tap to Speak">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="2" width="6" height="12" rx="3"/>
+            <path d="M5 10a7 7 0 0 0 14 0"/>
+            <line x1="12" y1="17" x2="12" y2="22"/>
+            <line x1="8" y1="22" x2="16" y2="22"/>
+          </svg>
+        </button>
+
+        <div class="waveform" id="waveform" aria-hidden="true">
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+        </div>
+
+        <div>
+          <div class="mic-hint" id="mic-status">Tap Mic to Speak or Paste Voice Note</div>
+          <div class="mic-subhint" id="speech-support-note">Say items, prices, client name &amp; due date naturally</div>
+        </div>
+      </div>
+
+      <textarea id="raw-transcript" class="transcript-box" rows="3" placeholder='e.g. "Quote for Tendai: 3 bags of cement at $11 each, 2 wheelbarrows for $45 each, delivery $10 due Friday via EcoCash"'></textarea>
+
+      <!-- 1-Tap Realistic Sample Presets -->
+      <div class="sample-pills">
+        <button type="button" class="sample-pill" onclick="loadSample('hardware')">🧱 Hardware Order</button>
+        <button type="button" class="sample-pill" onclick="loadSample('quote')">☀️ Solar Client Quote</button>
+        <button type="button" class="sample-pill" onclick="loadSample('checklist')">✅ Errand Checklist</button>
+      </div>
+
+      <div class="studio-actions">
+        <button type="button" class="btn-convert" onclick="parseAndBuildCard()">
+          <span>⚡ Convert to Action Card</span>
+        </button>
+        <button type="button" class="btn-clear-text" onclick="clearTranscript()">Clear</button>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         2. EDITABLE ACTION CARD / RECEIPT PREVIEW
+         ========================================================= -->
+    <section class="card" aria-label="Action Card and Receipt Editor">
+      <div class="card-header no-print">
+        <div>
+          <h2 class="card-title">🧾 Structured Action Card</h2>
+          <p class="card-sub">Tap any field below to edit quantities, prices, or tasks</p>
+        </div>
+      </div>
+
+      <!-- Mode Switcher Tabs -->
+      <div class="mode-tabs no-print" role="tablist">
+        <button type="button" class="mode-tab active" id="tab-order" onclick="setDocMode('ORDER')">Order / Receipt</button>
+        <button type="button" class="mode-tab" id="tab-quote" onclick="setDocMode('QUOTE')">Quote / Invoice</button>
+        <button type="button" class="mode-tab" id="tab-checklist" onclick="setDocMode('CHECKLIST')">Action Checklist</button>
+      </div>
+
+      <!-- Printable Receipt / Card Sheet -->
+      <div class="receipt-sheet" id="printable-card">
+        <div class="receipt-header-bar">
+          <div>
+            <span class="doc-type-badge" id="doc-badge">ORDER / RECEIPT</span>
+            <div class="biz-header-text" id="display-biz-name">My Quick Business</div>
+          </div>
+          <div class="doc-meta-right">
+            <div id="doc-ref">#VNA-1024</div>
+            <div id="doc-date">Today</div>
+          </div>
+        </div>
+
+        <!-- Client, Due Date, Currency & Payment Method -->
+        <div class="meta-grid">
+          <div class="field-box">
+            <label class="field-label" for="card-client">Client / Contact</label>
+            <input type="text" id="card-client" value="Tendai Moyo" oninput="syncCardMeta()" />
+          </div>
+          <div class="field-box">
+            <label class="field-label" for="card-due">Due Date / When</label>
+            <input type="text" id="card-due" value="Tomorrow" oninput="syncCardMeta()" />
+          </div>
+          <div class="field-box">
+            <label class="field-label" for="card-currency">Primary Currency</label>
+            <select id="card-currency" onchange="syncCardMeta()">
+              <option value="$">USD ($)</option>
+              <option value="ZiG ">ZiG</option>
+              <option value="R">ZAR (R)</option>
+              <option value="£">GBP (£)</option>
+              <option value="€">EUR (€)</option>
+            </select>
+          </div>
+          <div class="field-box">
+            <label class="field-label" for="card-payment">Payment Method</label>
+            <input type="text" id="card-payment" value="EcoCash / Cash" oninput="syncCardMeta()" />
+          </div>
+        </div>
+
+        <!-- LINE ITEMS SECTION (Shown in ORDER & QUOTE modes) -->
+        <div id="items-section">
+          <div class="items-header">
+            <span>Item / Service</span>
+            <span style="text-align:right;">Qty</span>
+            <span style="text-align:right;">Unit Price</span>
+            <span></span>
+          </div>
+          <div id="items-container"></div>
+          <button type="button" class="btn-add-row" onclick="addLineItem()">+ Add Line Item</button>
+
+          <!-- Totals & Secondary Currency Converter -->
+          <div class="totals-panel">
+            <div class="fx-strip no-print">
+              <label style="display:inline-flex; align-items:center; gap:5px; font-weight:800; cursor:pointer;">
+                <input type="checkbox" id="fx-toggle" onchange="toggleDualCurrency()" />
+                <span>Show Dual Currency Total</span>
+              </label>
+              <div class="fx-inputs">
+                <span>1$ =</span>
+                <input type="number" id="fx-rate" step="any" min="0.01" value="28.5" oninput="updateFxSettings()" aria-label="Exchange Rate" />
+                <input type="text" id="fx-code" class="curr-tag" maxlength="5" value="ZiG" oninput="updateFxSettings()" aria-label="Secondary Currency Code" />
+              </div>
+            </div>
+
+            <div class="grand-total-row">
+              <span class="grand-label">Grand Total</span>
+              <div class="grand-amounts">
+                <div class="grand-main" id="grand-total-main">$0.00</div>
+                <div class="grand-secondary hidden" id="grand-total-alt">≈ ZiG 0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CHECKLIST SECTION (Shown in CHECKLIST mode) -->
+        <div id="checklist-section" class="hidden">
+          <div class="field-label" style="margin-bottom:6px;">Action Items &amp; Tasks</div>
+          <div id="tasks-container"></div>
+          <button type="button" class="btn-add-row" onclick="addTaskItem()">+ Add Action Item</button>
+        </div>
+      </div>
+
+      <!-- Output Actions -->
+      <div class="output-grid no-print">
+        <button type="button" class="btn-whatsapp" onclick="shareToWhatsApp()">
+          <span>📲 Send Card on WhatsApp</span>
+        </button>
+        <button type="button" class="btn-secondary" onclick="copyFormattedCard()">
+          <span>📋 Copy Text</span>
+        </button>
+        <button type="button" class="btn-secondary" onclick="window.print()">
+          <span>🖨️ Print / Save PDF</span>
+        </button>
+        <button type="button" class="btn-save-vault" style="grid-column: 1 / -1;" onclick="saveCurrentCardToVault()">
+          <span>💾 Save to Offline History Vault</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         3. OFFLINE HISTORY VAULT
+         ========================================================= -->
+    <section class="card vault-section no-print" aria-label="Saved Offline History Vault">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">🗂️ Offline History Vault</h2>
+          <p class="card-sub" id="vault-count-sub">0 saved cards on this device</p>
+        </div>
+        <button type="button" class="btn-secondary" style="padding:6px 10px; font-size:11px;" onclick="openProModal()">Business Header</button>
+      </div>
+
+      <div class="search-bar">
+        <input type="text" id="vault-search" placeholder="Search saved receipts, clients, or tasks..." oninput="renderVault()" />
+      </div>
+
+      <div id="vault-list" class="vault-list"></div>
+    </section>
+
+  </main>
+
+  <!-- =========================================================
+       PRO UPGRADE & CUSTOM BUSINESS HEADER MODAL ($2.99)
+       ========================================================= -->
+  <div class="modal-overlay no-print" id="pro-modal" role="dialog" aria-modal="true" aria-labelledby="pro-title">
+    <div class="modal-box">
+      <div class="modal-head">
+        <span class="modal-title" id="pro-title">⚡ VoiceNote-to-Action PRO</span>
+        <button type="button" class="btn-secondary" style="padding:5px 9px;" onclick="closeProModal()">✕</button>
+      </div>
+
+      <p style="font-size:13px; color:var(--text-muted);">
+        Turn every voice note into branded customer receipts with zero monthly fees.
+      </p>
+
+      <ul class="pro-list">
+        <li><span class="pro-check">✓</span><span><strong>Custom Business Header</strong> printed at the top of every WhatsApp &amp; PDF receipt</span></li>
+        <li><span class="pro-check">✓</span><span><strong>Dual-Currency Totals</strong> (e.g., USD + ZiG/ZAR side-by-side)</span></li>
+        <li><span class="pro-check">✓</span><span><strong>Unlimited Offline History Vault</strong> (Free tier saves up to 5 cards)</span></li>
+      </ul>
+
+      <!-- Custom Business Header Input (Editable when Pro is unlocked) -->
+      <div style="background:var(--bg-subtle); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:12px;">
+        <label class="field-label" for="input-biz-name" style="display:block; margin-bottom:4px;">
+          Your Business / Trader Header <span id="biz-lock-tag" style="color:var(--amber-600);">(PRO)</span>
+        </label>
+        <input type="text" id="input-biz-name" placeholder="e.g. Chitungwiza Solar &amp; Hardware" oninput="updateBusinessName(this.value)" />
+      </div>
+
+      <div id="pro-unlock-box" style="background:var(--amber-50); border:1px solid var(--amber-500); border-radius:12px; padding:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:12px; font-weight:800; color:var(--text-main);">One-Time Lifetime License</span>
+          <strong style="font-size:18px; color:var(--emerald-700);">$2.99</strong>
+        </div>
+        <button type="button" class="btn-convert" style="width:100%;" onclick="activateProDemo()">
+          <span>Unlock PRO Instantly (Demo Preview)</span>
+        </button>
+      </div>
+
+      <div id="pro-active-box" class="hidden" style="background:var(--emerald-50); border:1px solid var(--emerald-600); border-radius:12px; padding:11px; font-size:12.5px; display:flex; justify-content:space-between; align-items:center;">
+        <strong style="color:var(--emerald-800);">✓ PRO Lifetime Active on Device</strong>
+        <button type="button" class="btn-secondary" style="padding:5px 9px; font-size:11px;" onclick="deactivateProDemo()">Revert Free</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast no-print" id="toast">Saved</div>
+
+  <script>
+    /* =========================================================
+       VOICENOTE-TO-ACTION — CLIENT-SIDE VOICE & NLP ENGINE
+       Zero external APIs • 100% offline • Instant execution
+       ========================================================= */
+    const STORAGE_KEY = 'vna_offline_state_v1';
+    const FREE_VAULT_LIMIT = 5;
+
+    const SAMPLES = {
+      hardware: 'Order for Tendai Moyo: 3 bags of cement at $11 each, 2 wheelbarrows for $45 each, and delivery $10 due tomorrow via EcoCash',
+      quote: 'Quote for Sarah Ndlovu: 1x 3kVA Solar Inverter at $380, 4 solar panels at $95 each, installation fee $60 valid until Friday',
+      checklist: 'Checklist for Farai: buy printer ink, call supplier about steel rods, send invoice to Mbare Hardware, and deposit cash before 3pm tomorrow'
+    };
+
+    const NUMBER_WORDS = {
+      one: 1, a: 1, an: 1, two: 2, three: 3, four: 4, five: 5,
+      six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12
+    };
+
+    function getDefaultState() {
+      return {
+        darkMode: false,
+        isPro: false,
+        businessName: 'My Quick Business',
+        fxEnabled: false,
+        fxRate: 28.5,
+        fxCode: 'ZiG',
+        currentCard: {
+          id: 'VNA-' + Math.floor(1000 + Math.random() * 9000),
+          mode: 'ORDER', // 'ORDER' | 'QUOTE' | 'CHECKLIST'
+          client: 'Tendai Moyo',
+          dueDate: 'Tomorrow',
+          currency: '$',
+          paymentMethod: 'EcoCash',
+          items: [
+            { name: 'Bags of cement', qty: 3, price: 11 },
+            { name: 'Wheelbarrows', qty: 2, price: 45 },
+            { name: 'Delivery', qty: 1, price: 10 }
+          ],
+          tasks: [
+            { text: 'Confirm stock availability', done: false },
+            { text: 'Send receipt on WhatsApp', done: false }
+          ]
+        },
+        vault: []
+      };
+    }
+
+    let state = loadState();
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return getDefaultState();
+        const parsed = JSON.parse(raw);
+        return Object.assign(getDefaultState(), parsed);
+      } catch (e) {
+        return getDefaultState();
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        // Handle quota gracefully
+      }
+    }
+
+    /* =========================================================
+       1. WEB SPEECH API (NATIVE OFFLINE/DEVICE SPEECH-TO-TEXT)
+       ========================================================= */
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let isListening = false;
+    let baseTranscriptBeforeSpeech = '';
+
+    function initSpeechEngine() {
+      const noteEl = document.getElementById('speech-support-note');
+      if (!SpeechRecognition) {
+        noteEl.textContent = 'Voice mic unavailable in this browser — type or tap a sample below!';
+        return;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = function () {
+        isListening = true;
+        document.getElementById('mic-btn').classList.add('listening');
+        document.getElementById('waveform').classList.add('active');
+        document.getElementById('mic-status').textContent = 'Listening... Tap Mic Again to Stop & Convert';
+      };
+
+      recognition.onresult = function (event) {
+        let interim = '';
+        let finalChunk = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalChunk += transcript + ' ';
+          } else {
+            interim += transcript;
+          }
+        }
+        if (finalChunk) {
+          baseTranscriptBeforeSpeech = (baseTranscriptBeforeSpeech + ' ' + finalChunk).trim();
+        }
+        const combined = (baseTranscriptBeforeSpeech + ' ' + interim).trim();
+        document.getElementById('raw-transcript').value = combined;
+      };
+
+      recognition.onerror = function (event) {
+        stopListeningUI();
+        if (event.error === 'not-allowed') {
+          showToast('Microphone permission denied. Type or use a sample below.');
+        } else if (event.error !== 'aborted') {
+          showToast('Voice capture paused — you can edit text directly.');
+        }
+      };
+
+      recognition.onend = function () {
+        if (isListening) {
+          stopListeningUI();
+          if (document.getElementById('raw-transcript').value.trim()) {
+            parseAndBuildCard();
+          }
+        }
+      };
+    }
+
+    function stopListeningUI() {
+      isListening = false;
+      document.getElementById('mic-btn').classList.remove('listening');
+      document.getElementById('waveform').classList.remove('active');
+      document.getElementById('mic-status').textContent = 'Tap Mic to Speak or Paste Voice Note';
+    }
+
+    function toggleRecording() {
+      if (!recognition) {
+        showToast('Speech mic not supported here — type or tap a sample preset.');
+        document.getElementById('raw-transcript').focus();
+        return;
+      }
+
+      if (isListening) {
+        isListening = false;
+        recognition.stop();
+        stopListeningUI();
+        if (document.getElementById('raw-transcript').value.trim()) {
+          parseAndBuildCard();
+        }
+      } else {
+        baseTranscriptBeforeSpeech = document.getElementById('raw-transcript').value.trim();
+        try {
+          recognition.start();
+        } catch (e) {
+          stopListeningUI();
+        }
+      }
+    }
+
+    function loadSample(key) {
+      document.getElementById('raw-transcript').value = SAMPLES[key] || '';
+      parseAndBuildCard();
+    }
+
+    function clearTranscript() {
+      document.getElementById('raw-transcript').value = '';
+      baseTranscriptBeforeSpeech = '';
+      document.getElementById('raw-transcript').focus();
+    }
+
+    /* =========================================================
+       2. SMART RULE-BASED NLP EXTRACTOR (PURE JAVASCRIPT)
+       Extracts Mode, Client, Currency, Line Items, Prices,
+       Due Dates, Payment Methods, and Action Tasks
+       ========================================================= */
+    function parseAndBuildCard() {
+      const raw = document.getElementById('raw-transcript').value.trim();
+      if (!raw) {
+        showToast('Speak or enter a voice note first.');
+        return;
+      }
+
+      const lower = raw.toLowerCase();
+
+      // 1. Detect Document Mode
+      let mode = 'ORDER';
+      if (/\b(quote|quotation|estimate|invoice|proforma)\b/i.test(raw)) {
+        mode = 'QUOTE';
+      } else if (/\b(checklist|todo|to-do|tasks?|errands?|remind me to)\b/i.test(raw)) {
+        mode = 'CHECKLIST';
+      }
+
+      // 2. Detect Currency
+      let currency = '$';
+      if (/\bzig\b/i.test(raw)) currency = 'ZiG ';
+      else if (/\b(zar|rand)\b/i.test(raw) || /\bR\d+/i.test(raw)) currency = 'R';
+      else if (/£|\bpounds?\b/i.test(raw)) currency = '£';
+      else if (/€|\beuros?\b/i.test(raw)) currency = '€';
+
+      // 3. Extract Client / Contact Name
+      let client = 'Walk-in Client';
+      const clientMatch = raw.match(/\b(?:for|to|from|client|customer)\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)/);
+      if (clientMatch && clientMatch[1]) {
+        const candidate = clientMatch[1].trim();
+        if (!/^(Tomorrow|Today|Friday|Monday|Tuesday|Wednesday|Thursday|Saturday|Sunday|EcoCash|Cash|InnBucks)$/i.test(candidate)) {
+          client = candidate;
+        }
+      }
+
+      // 4. Extract Due Date / Deadline
+      let dueDate = 'On Receipt';
+      const dueMatch = raw.match(/\b(?:due|by|before|until|on|for)\s+(today|tomorrow|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next week|\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*)/i);
+      if (dueMatch && dueMatch[1]) {
+        dueDate = capitalizeWords(dueMatch[1]);
+      } else if (/\btomorrow\b/i.test(raw)) {
+        dueDate = 'Tomorrow';
+      } else if (/\btoday\b/i.test(raw)) {
+        dueDate = 'Today';
+      }
+
+      // 5. Extract Payment Method
+      let paymentMethod = 'Cash / Mobile Money';
+      if (/\becocash\b/i.test(raw)) paymentMethod = 'EcoCash';
+      else if (/\binnbucks\b/i.test(raw)) paymentMethod = 'InnBucks';
+      else if (/\b(eft|bank|transfer|zipit)\b/i.test(raw)) paymentMethod = 'Bank / ZIPIT';
+      else if (/\bcash\b/i.test(raw)) paymentMethod = 'Cash';
+      else if (/\bcard|swipe\b/i.test(raw)) paymentMethod = 'Card / Swipe';
+
+      // Strip leading header prefix before colon if present (e.g. "Quote for Tendai: ...")
+      let bodyText = raw;
+      const colonIdx = raw.indexOf(':');
+      if (colonIdx > 0 && colonIdx < 48) {
+        bodyText = raw.slice(colonIdx + 1).trim();
+      } else {
+        // Remove leading "Order for Name" or "Checklist for Name"
+        bodyText = bodyText.replace(/^(?:quote|order|receipt|invoice|checklist|tasks?)\s+(?:for|to|from)\s+[a-zA-Z\s]+?(?=\d|\b(?:buy|call|send|pay|get|pick|deliver)\b|,)/i, '').trim();
+      }
+
+      // Split clauses by comma, semicolon, newline, or " and "
+      const clauses = bodyText
+        .split(/[,;\n]+|\s+\band\b\s+/i)
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      const items = [];
+      const tasks = [];
+
+      clauses.forEach(clause => {
+        // Clean trailing metadata words from clause
+        let cleaned = clause
+          .replace(/\b(?:due|by|until|before)\s+(?:today|tomorrow|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next week).*$/i, '')
+          .replace(/\b(?:via|using|with)\s+(?:ecocash|innbucks|cash|bank|transfer|zipit|card).*$/i, '')
+          .trim();
+
+        if (!cleaned) return;
+
+        // Pattern A: "<qty> <item> at/for/@ <currency?><price> [each]"
+        const matchQtyPrice = cleaned.match(/^(?:(\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:x|×)?\s+)?(.+?)\s+(?:at|for|@)\s*(?:\$|zig|zar|r|£|€)?\s*(\d+(?:\.\d+)?)\s*(?:dollars?|usd|zig|rand|each|per\s+\w+)?$/i);
+
+        // Pattern B: "<item> <currency><price>" (e.g. "delivery $10" or "installation fee 60")
+        const matchItemPrice = cleaned.match(/^(.+?)\s+(?:\$|zig|zar|r|£|€)\s*(\d+(?:\.\d+)?)$/i);
+
+        if (matchQtyPrice) {
+          const rawQty = matchQtyPrice[1];
+          const qty = rawQty ? (NUMBER_WORDS[rawQty.toLowerCase()] || parseFloat(rawQty) || 1) : 1;
+          const name = capitalizeWords(matchQtyPrice[2].replace(/^of\s+/i, '').trim());
+          const price = parseFloat(matchQtyPrice[3]) || 0;
+          items.push({ name, qty, price });
+          tasks.push({ text: `${qty}x ${name} (${currency}${(qty * price).toFixed(2)})`, done: false });
+        } else if (matchItemPrice) {
+          const name = capitalizeWords(matchItemPrice[1].trim());
+          const price = parseFloat(matchItemPrice[2]) || 0;
+          items.push({ name, qty: 1, price });
+          tasks.push({ text: `${name} (${currency}${price.toFixed(2)})`, done: false });
+        } else {
+          // Treat as checklist action item
+          const taskClean = capitalizeWords(cleaned.replace(/^(?:to|please)\s+/i, ''));
+          if (taskClean.length > 1) {
+            tasks.push({ text: taskClean, done: false });
+          }
+        }
+      });
+
+      // If no priced items were found, switch automatically to CHECKLIST mode
+      if (items.length === 0 && tasks.length > 0) {
+        mode = 'CHECKLIST';
+      }
+
+      if (items.length === 0) {
+        items.push({ name: 'Item / Service', qty: 1, price: 0 });
+      }
+      if (tasks.length === 0) {
+        tasks.push({ text: capitalizeWords(raw), done: false });
+      }
+
+      state.currentCard = {
+        id: 'VNA-' + Math.floor(1000 + Math.random() * 9000),
+        mode,
+        client,
+        dueDate,
+        currency,
+        paymentMethod,
+        items,
+        tasks
+      };
+
+      saveState();
+      renderCardEditor();
+      showToast(`Converted into ${mode === 'CHECKLIST' ? 'Action Checklist' : mode === 'QUOTE' ? 'Quote' : 'Receipt'}!`);
+    }
+
+    function capitalizeWords(str) {
+      return String(str)
+        .trim()
+        .replace(/^\w/, c => c.toUpperCase());
+    }
+
+    /* =========================================================
+       3. INTERACTIVE CARD EDITOR & TOTALS ENGINE
+       ========================================================= */
+    function setDocMode(mode) {
+      state.currentCard.mode = mode;
+      saveState();
+      renderCardEditor();
+    }
+
+    function syncCardMeta() {
+      state.currentCard.client = document.getElementById('card-client').value;
+      state.currentCard.dueDate = document.getElementById('card-due').value;
+      state.currentCard.currency = document.getElementById('card-currency').value;
+      state.currentCard.paymentMethod = document.getElementById('card-payment').value;
+      saveState();
+      renderTotals();
+    }
+
+    function updateLineItem(index, field, value) {
+      if (!state.currentCard.items[index]) return;
+      if (field === 'name') {
+        state.currentCard.items[index].name = value;
+      } else if (field === 'qty') {
+        state.currentCard.items[index].qty = Math.max(0, parseFloat(value) || 0);
+      } else if (field === 'price') {
+        state.currentCard.items[index].price = Math.max(0, parseFloat(value) || 0);
+      }
+      saveState();
+      renderTotals();
+    }
+
+    function addLineItem() {
+      state.currentCard.items.push({ name: '', qty: 1, price: 0 });
+      saveState();
+      renderCardEditor();
+    }
+
+    function removeLineItem(index) {
+      if (state.currentCard.items.length <= 1) {
+        state.currentCard.items[0] = { name: '', qty: 1, price: 0 };
+      } else {
+        state.currentCard.items.splice(index, 1);
+      }
+      saveState();
+      renderCardEditor();
+    }
+
+    function toggleTask(index) {
+      if (!state.currentCard.tasks[index]) return;
+      state.currentCard.tasks[index].done = !state.currentCard.tasks[index].done;
+      saveState();
+      renderCardEditor();
+    }
+
+    function updateTaskText(index, val) {
+      if (!state.currentCard.tasks[index]) return;
+      state.currentCard.tasks[index].text = val;
+      saveState();
+    }
+
+    function addTaskItem() {
+      state.currentCard.tasks.push({ text: '', done: false });
+      saveState();
+      renderCardEditor();
+    }
+
+    function removeTaskItem(index) {
+      if (state.currentCard.tasks.length <= 1) {
+        state.currentCard.tasks[0] = { text: '', done: false };
+      } else {
+        state.currentCard.tasks.splice(index, 1);
+      }
+      saveState();
+      renderCardEditor();
+    }
+
+    function toggleDualCurrency() {
+      const checked = document.getElementById('fx-toggle').checked;
+      if (checked && !state.isPro) {
+        document.getElementById('fx-toggle').checked = false;
+        showToast('Dual-currency receipt totals are a PRO feature.');
+        openProModal();
+        return;
+      }
+      state.fxEnabled = checked;
+      saveState();
+      renderTotals();
+    }
+
+    function updateFxSettings() {
+      const rate = parseFloat(document.getElementById('fx-rate').value);
+      const code = document.getElementById('fx-code').value.trim().toUpperCase();
+      if (rate > 0) state.fxRate = rate;
+      if (code) state.fxCode = code;
+      saveState();
+      renderTotals();
+    }
+
+    function calculateGrandTotal() {
+      return state.currentCard.items.reduce((sum, item) => {
+        return sum + ((Number(item.qty) || 0) * (Number(item.price) || 0));
+      }, 0);
+    }
+
+    function formatMoney(curr, amount) {
+      const num = Number(amount) || 0;
+      const formatted = num % 1 === 0 && curr === 'ZiG ' ? num.toFixed(0) : num.toFixed(2);
+      return `${curr}${formatted}`;
+    }
+
+    function renderTotals() {
+      const total = calculateGrandTotal();
+      const curr = state.currentCard.currency || '$';
+      document.getElementById('grand-total-main').textContent = formatMoney(curr, total);
+
+      const altEl = document.getElementById('grand-total-alt');
+      if (state.isPro && state.fxEnabled) {
+        const converted = total * (state.fxRate || 1);
+        altEl.textContent = `≈ ${state.fxCode} ${converted >= 100 ? converted.toFixed(0) : converted.toFixed(2)} (@ ${state.fxRate})`;
+        altEl.classList.remove('hidden');
+      } else {
+        altEl.classList.add('hidden');
+      }
+    }
+
+    function renderCardEditor() {
+      const card = state.currentCard;
+
+      // Mode tabs
+      document.getElementById('tab-order').classList.toggle('active', card.mode === 'ORDER');
+      document.getElementById('tab-quote').classList.toggle('active', card.mode === 'QUOTE');
+      document.getElementById('tab-checklist').classList.toggle('active', card.mode === 'CHECKLIST');
+
+      const badgeLabels = {
+        ORDER: 'ORDER / RECEIPT',
+        QUOTE: 'QUOTE / INVOICE',
+        CHECKLIST: 'ACTION CHECKLIST'
+      };
+      document.getElementById('doc-badge').textContent = badgeLabels[card.mode] || 'ORDER / RECEIPT';
+      document.getElementById('display-biz-name').textContent = state.isPro && state.businessName
+        ? state.businessName
+        : 'VoiceNote Quick Receipt';
+      document.getElementById('doc-ref').textContent = `#${card.id}`;
+      document.getElementById('doc-date').textContent = new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+      // Meta inputs
+      document.getElementById('card-client').value = card.client || '';
+      document.getElementById('card-due').value = card.dueDate || '';
+      document.getElementById('card-currency').value = card.currency || '$';
+      document.getElementById('card-payment').value = card.paymentMethod || '';
+
+      // Toggle Items vs Checklist sections
+      const isChecklist = card.mode === 'CHECKLIST';
+      document.getElementById('items-section').classList.toggle('hidden', isChecklist);
+      document.getElementById('checklist-section').classList.toggle('hidden', !isChecklist);
+
+      // Render Line Items
+      const itemsContainer = document.getElementById('items-container');
+      itemsContainer.innerHTML = card.items.map((item, idx) => `
+        <div class="item-row">
+          <input type="text" value="${escapeHtml(item.name)}" placeholder="Item description" oninput="updateLineItem(${idx}, 'name', this.value)" />
+          <input type="number" class="num" step="any" min="0" value="${item.qty}" oninput="updateLineItem(${idx}, 'qty', this.value)" aria-label="Quantity" />
+          <input type="number" class="num" step="any" min="0" value="${item.price}" oninput="updateLineItem(${idx}, 'price', this.value)" aria-label="Unit Price" />
+          <button type="button" class="btn-row-del" onclick="removeLineItem(${idx})" title="Remove row">✕</button>
+        </div>
+      `).join('');
+
+      // Render Checklist Tasks
+      const tasksContainer = document.getElementById('tasks-container');
+      tasksContainer.innerHTML = card.tasks.map((t, idx) => `
+        <div class="task-row">
+          <input type="checkbox" class="task-check" ${t.done ? 'checked' : ''} onchange="toggleTask(${idx})" />
+          <input type="text" class="task-input ${t.done ? 'done' : ''}" value="${escapeHtml(t.text)}" placeholder="Action item..." oninput="updateTaskText(${idx}, this.value)" />
+          <button type="button" class="btn-row-del" onclick="removeTaskItem(${idx})" title="Remove task">✕</button>
+        </div>
+      `).join('');
+
+      // FX Controls
+      document.getElementById('fx-toggle').checked = Boolean(state.isPro && state.fxEnabled);
+      document.getElementById('fx-rate').value = state.fxRate;
+      document.getElementById('fx-code').value = state.fxCode;
+
+      renderTotals();
+    }
+
+    /* =========================================================
+       4. WHATSAPP SHARE & CLIPBOARD EXPORT
+       ========================================================= */
+    function buildFormattedCardText() {
+      const card = state.currentCard;
+      const headerTitle = state.isPro && state.businessName ? `*${state.businessName.toUpperCase()}*\n` : '';
+      const modeTitle = card.mode === 'QUOTE' ? 'QUOTE / INVOICE' : card.mode === 'CHECKLIST' ? 'ACTION CHECKLIST' : 'ORDER RECEIPT';
+
+      const lines = [
+        `${headerTitle}🧾 *${modeTitle}* (#${card.id})`,
+        `👤 *For:* ${card.client || 'Client'}`,
+        `📅 *Due:* ${card.dueDate || 'Today'}`,
+        card.mode !== 'CHECKLIST' ? `💳 *Payment:* ${card.paymentMethod || 'Cash'}` : '',
+        ``
+      ].filter(Boolean);
+
+      if (card.mode === 'CHECKLIST') {
+        lines.push(`*ACTION ITEMS:*`);
+        card.tasks.forEach(t => {
+          if (t.text.trim()) {
+            lines.push(`${t.done ? '✅' : '⬜'} ${t.text.trim()}`);
+          }
+        });
+      } else {
+        lines.push(`*ITEMS:*`);
+        card.items.forEach(item => {
+          if (item.name.trim()) {
+            const sub = (Number(item.qty) || 0) * (Number(item.price) || 0);
+            lines.push(`• ${item.qty}x ${item.name.trim()} — ${formatMoney(card.currency, sub)}`);
+          }
+        });
+
+        const total = calculateGrandTotal();
+        lines.push(``);
+        lines.push(`💰 *TOTAL: ${formatMoney(card.currency, total)}*`);
+
+        if (state.isPro && state.fxEnabled) {
+          const alt = total * (state.fxRate || 1);
+          lines.push(`💱 *Alt Total:* ≈ ${state.fxCode} ${alt >= 100 ? alt.toFixed(0) : alt.toFixed(2)}`);
+        }
+      }
+
+      lines.push(``);
+      lines.push(`_Created offline via VoiceNote-to-Action_`);
+      return lines.join('\n');
+    }
+
+    function shareToWhatsApp() {
+      const msg = buildFormattedCardText();
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
+    }
+
+    function copyFormattedCard() {
+      const msg = buildFormattedCardText();
+      const ta = document.createElement('textarea');
+      ta.value = msg;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast('Receipt copied! Ready to paste in WhatsApp.');
+      } catch (e) {
+        showToast('Could not copy automatically.');
+      }
+      document.body.removeChild(ta);
+    }
+
+    /* =========================================================
+       5. OFFLINE HISTORY VAULT & FREEMIUM PRO UNLOCK
+       ========================================================= */
+    function saveCurrentCardToVault() {
+      const existingIdx = state.vault.findIndex(v => v.id === state.currentCard.id);
+      if (existingIdx === -1 && !state.isPro && state.vault.length >= FREE_VAULT_LIMIT) {
+        showToast(`Free plan stores up to ${FREE_VAULT_LIMIT} cards. Upgrade to PRO!`);
+        openProModal();
+        return;
+      }
+
+      const snapshot = JSON.parse(JSON.stringify(state.currentCard));
+      snapshot.savedAt = new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+      snapshot.total = calculateGrandTotal();
+      if (!snapshot.status) snapshot.status = 'PENDING';
+
+      if (existingIdx >= 0) {
+        state.vault[existingIdx] = snapshot;
+      } else {
+        state.vault.unshift(snapshot);
+      }
+
+      // Generate fresh ID for next card edit
+      state.currentCard.id = 'VNA-' + Math.floor(1000 + Math.random() * 9000);
+      saveState();
+      renderCardEditor();
+      renderVault();
+      showToast('Saved to Offline History Vault!');
+    }
+
+    function loadFromVault(id) {
+      const found = state.vault.find(v => v.id === id);
+      if (!found) return;
+      state.currentCard = JSON.parse(JSON.stringify(found));
+      saveState();
+      renderCardEditor();
+      showToast(`Loaded #${found.id} into editor`);
+      window.scrollTo({ top: 180, behavior: 'smooth' });
+    }
+
+    function toggleVaultStatus(id) {
+      const item = state.vault.find(v => v.id === id);
+      if (!item) return;
+      item.status = item.status === 'DONE' ? 'PENDING' : 'DONE';
+      saveState();
+      renderVault();
+    }
+
+    function deleteFromVault(id) {
+      state.vault = state.vault.filter(v => v.id !== id);
+      saveState();
+      renderVault();
+      showToast('Removed from vault');
+    }
+
+    function renderVault() {
+      const listEl = document.getElementById('vault-list');
+      const query = (document.getElementById('vault-search').value || '').trim().toLowerCase();
+
+      const limitText = state.isPro ? 'Unlimited PRO storage' : `Free tier: ${state.vault.length}/${FREE_VAULT_LIMIT} slots used`;
+      document.getElementById('vault-count-sub').textContent = `${state.vault.length} saved • ${limitText}`;
+
+      const filtered = state.vault.filter(v => {
+        if (!query) return true;
+        const hay = `${v.client} ${v.mode} ${v.id} ${(v.items || []).map(i => i.name).join(' ')} ${(v.tasks || []).map(t => t.text).join(' ')}`.toLowerCase();
+        return hay.includes(query);
+      });
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `
+          <div style="text-align:center; padding:18px 10px; color:var(--text-faint); font-size:12.5px; border:1px dashed var(--border-strong); border-radius:12px;">
+            ${state.vault.length === 0 ? 'No saved cards yet. Tap <strong>Save to Offline History Vault</strong> above.' : 'No matching records found.'}
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(v => {
+        const isDone = v.status === 'DONE';
+        const summary = v.mode === 'CHECKLIST'
+          ? `${(v.tasks || []).length} tasks`
+          : formatMoney(v.currency || '$', v.total || 0);
+
+        return `
+          <div class="vault-item">
+            <div class="vault-info" onclick="loadFromVault('${v.id}')">
+              <div class="vault-title-row">
+                <span class="doc-type-badge" style="margin:0; font-size:9.5px;">${v.mode}</span>
+                <span class="vault-client">${escapeHtml(v.client || 'Client')}</span>
+              </div>
+              <div class="vault-meta">#${v.id} • ${summary} • ${v.savedAt || 'Saved'}</div>
+            </div>
+
+            <div class="vault-actions">
+              <button type="button" class="status-pill ${isDone ? 'done' : 'pending'}" onclick="toggleVaultStatus('${v.id}')">
+                ${isDone ? (v.mode === 'CHECKLIST' ? 'Done ✓' : 'Paid ✓') : 'Pending'}
+              </button>
+              <button type="button" class="btn-row-del" onclick="deleteFromVault('${v.id}')" title="Delete">✕</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /* =========================================================
+       6. PRO MODAL, THEME & OFFLINE PWA SETUP
+       ========================================================= */
+    function renderProUI() {
+      document.getElementById('header-pro-badge').classList.toggle('hidden', !state.isPro);
+      document.getElementById('header-pro-btn').textContent = state.isPro ? 'PRO Active' : 'Pro $2.99';
+      document.getElementById('pro-unlock-box').classList.toggle('hidden', state.isPro);
+      document.getElementById('pro-active-box').classList.toggle('hidden', !state.isPro);
+      document.getElementById('biz-lock-tag').classList.toggle('hidden', state.isPro);
+
+      const bizInput = document.getElementById('input-biz-name');
+      bizInput.value = state.businessName || '';
+      bizInput.disabled = !state.isPro;
+    }
+
+    function openProModal() {
+      renderProUI();
+      document.getElementById('pro-modal').classList.add('open');
+    }
+
+    function closeProModal() {
+      document.getElementById('pro-modal').classList.remove('open');
+    }
+
+    function activateProDemo() {
+      state.isPro = true;
+      saveState();
+      renderProUI();
+      renderCardEditor();
+      renderVault();
+      showToast('🎉 VoiceNote-to-Action PRO Unlocked!');
+    }
+
+    function deactivateProDemo() {
+      state.isPro = false;
+      state.fxEnabled = false;
+      saveState();
+      renderProUI();
+      renderCardEditor();
+      renderVault();
+      showToast('Switched to Free tier');
+    }
+
+    function updateBusinessName(val) {
+      state.businessName = val;
+      saveState();
+      renderCardEditor();
+    }
+
+    document.getElementById('pro-modal').addEventListener('click', function (e) {
+      if (e.target === this) closeProModal();
+    });
+
+    function applyTheme() {
+      document.body.classList.toggle('dark', Boolean(state.darkMode));
+      document.getElementById('theme-icon').textContent = state.darkMode ? '☀️' : '🌙';
+    }
+
+    function toggleTheme() {
+      state.darkMode = !state.darkMode;
+      saveState();
+      applyTheme();
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function updateOnlineStatus() {
+      document.getElementById('net-status').textContent = navigator.onLine
+        ? '100% Offline • Zero AI Server Bills'
+        : 'Offline Mode Active • Working Locally';
+    }
+
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+
+    // Inline Service Worker registration for offline PWA caching
+    if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+      const swCode = `
+        const CACHE = 'voicenote-action-v1';
+        self.addEventListener('install', e => {
+          self.skipWaiting();
+          e.waitUntil(caches.open(CACHE).then(c => c.addAll([self.location.href]).catch(() => {})));
+        });
+        self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+        self.addEventListener('fetch', e => {
+          e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).catch(() => r)));
+        });
+      `;
+      try {
+        const blob = new Blob([swCode], { type: 'application/javascript' });
+        navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+      } catch (e) {}
+    }
+
+    // Boot App
+    applyTheme();
+    initSpeechEngine();
+    renderProUI();
+    renderCardEditor();
+    renderVault();
+    updateOnlineStatus();
+  </script>
+</body>
+</html>
